@@ -1,0 +1,3 @@
+# モデル設定
+LLM_MODEL=gemini-3-flash-preview
+HOST_UID = 1002

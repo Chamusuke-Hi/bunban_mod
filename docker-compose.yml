@@ -1,0 +1,31 @@
+services:
+  excel-agent:
+    image: ${USER:-gest}_excel_agent:dev
+    container_name: ${USER:-gest}_excel_agent
+    build:
+      context: .
+      target: dev
+      args:
+        - http_proxy=http://umproxy.prx.intra.hitachi.co.jp:8080
+        - https_proxy=http://umproxy.prx.intra.hitachi.co.jp:8080
+        - UID=${HOST_UID:-1000}
+    network_mode: host
+    env_file:
+      - .eenv
+      - .env
+    environment:
+      - http_proxy=http://umproxy.prx.intra.hitachi.co.jp:8080
+      - https_proxy=http://umproxy.prx.intra.hitachi.co.jp:8080
+      - no_proxy=.hitachi.co.jp,localhost,127.0.0.1
+      - NO_PROXY=.hitachi.co.jp,localhost,127.0.0.1
+    volumes:
+      - .:/app
+      - ../genka:/app/data:ro
+      - ./output:/app/output
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 2g
+    ports:
+      - "8501:8501"
