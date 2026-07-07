@@ -110,7 +110,8 @@ HOST_UID=$(id -u) docker compose run --rm excel-agent python -m src.main "分番
 ### 1. エージェントループ (`agent.py`)
 
 OpenAI の **Function Calling** (tool use) の仕組みで動きます。
-LangChainなどのフレームワークは使わず、`openai` ライブラリを直接使用しています。
+LangChain の Agent/Chain は使わず、`openai` ライブラリを直接使用しています。
+ワークフロー制御（経験確認→実行→承認）には **LangGraph** の `StateGraph` を利用しています。
 
 ```
 while ステップ < 30:
@@ -185,16 +186,26 @@ cp .env.example .env
 
 ## 実行方法
 
-### CLI（コンテナ）
+### 非対話モード（docker compose up）
+
+対話なしで自動実行されます（経験スキップ・結果自動承認）。
 
 ```bash
 HOST_UID=$(id -u) docker compose up --build
 ```
 
+### 対話モード（docker compose run）
+
+経験参照の確認・結果の承認/却下を対話的に操作できます。
+
+```bash
+HOST_UID=$(id -u) docker compose run --rm excel-agent
+```
+
 ### カスタム指示付き
 
 ```bash
-HOST_UID=$(id -u) docker compose run excel-agent python -m src.main "分番ごとの購入費用を集計してください"
+HOST_UID=$(id -u) docker compose run --rm excel-agent python -m src.main "分番ごとの購入費用を集計してください"
 ```
 
 ### Web UI
@@ -340,20 +351,23 @@ check_experience  list-approved → END
 ### コマンド一覧
 
 ```bash
-# 通常実行（経験確認 → 実行 → 承認確認がすべて対話で完結）
+# 非対話実行（経験スキップ・結果自動承認）
 HOST_UID=$(id -u) docker compose up --build
 
+# 対話実行（経験確認 → 実行 → 承認確認がすべて対話で完結）
+HOST_UID=$(id -u) docker compose run --rm excel-agent
+
 # 経験参照を強制有効（経験確認スキップ）
-docker compose run --rm excel-agent python -m src.main --experience
+HOST_UID=$(id -u) docker compose run --rm excel-agent python -m src.main --experience
 
 # 承認済み経験の一覧表示
 docker compose run --rm excel-agent python -m src.main list-approved
 ```
 
-### 実行時の流れ
+### 実行時の流れ（対話モード）
 
 ```
-$ HOST_UID=$(id -u) docker compose up --build
+$ HOST_UID=$(id -u) docker compose run --rm excel-agent
 
 [LangGraph] ノード: check_experience - 開始
 【使用可能な承認済み経験】 1件見つかりました
@@ -386,8 +400,9 @@ $ HOST_UID=$(id -u) docker compose up --build
 [LangGraph] ノード: approve - 終了
 ```
 
-- 経験確認: `y` → 過去の成功パターンをプロンプトに注入 / `n` → 自律計画
-- 結果承認: `y` → pending を approved に移動（ホストに永続保存） / `n` → pending を削除
+- 経験確認（対話モードのみ）: `y` → 過去の成功パターンをプロンプトに注入 / `n` → 自律計画
+- 結果承認（対話モードのみ）: `y` → pending を approved に移動（ホストに永続保存） / `n` → pending を削除
+- 非対話モード（`docker compose up`）: 経験スキップ・結果自動承認で実行
 - コンテナ終了時に `/tmp/` の pending は自動消滅（承認忘れ防止）
 
 ### 環境変数での制御 (`.eenv`)
@@ -399,11 +414,14 @@ $ HOST_UID=$(id -u) docker compose up --build
 ### 典型的な運用フロー
 
 ```bash
-# 実行 → 経験確認 → 実行 → 結果承認がすべて1コマンドで完結
+# 手軽に非対話で実行（経験スキップ・自動承認）
 HOST_UID=$(id -u) docker compose up --build
 
-# 次回は承認済み経験を強制参照して精度向上
-docker compose run --rm excel-agent python -m src.main --experience
+# 対話モードで経験確認・結果承認を手動で操作
+HOST_UID=$(id -u) docker compose run --rm excel-agent
+
+# 承認済み経験を強制参照して精度向上
+HOST_UID=$(id -u) docker compose run --rm excel-agent python -m src.main --experience
 ```
 
 > **pending はコンテナ内 `/tmp/` に保存されます。**  
