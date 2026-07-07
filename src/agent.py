@@ -6,6 +6,7 @@ import json
 import openai
 
 from .tools import TOOL_SCHEMAS, call_tool
+from .experience import save_pending_experience, load_experiences, format_experiences_for_prompt
 
 
 SYSTEM_PROMPT = """\
@@ -35,19 +36,38 @@ def create_client() -> openai.OpenAI:
     )
 
 
-def run(user_input: str = None) -> str:
-    """エージェントを実行する（ツール呼び出しループ）"""
+def run(
+    user_input: str = None,
+    use_experience: bool = False,
+) -> str:
+    """エージェントを実行する（ツール呼び出しループ）
+
+    Args:
+        user_input: ユーザーの指示テキスト
+        use_experience: Trueなら過去の成功経験をプロンプトに注入する
+    """
     if user_input is None:
         user_input = "分番ごとに購入品の費用を集計してください。"
 
     client = create_client()
     model = os.environ.get("LLM_MODEL", "gemini-3-flash-preview")
 
+    # 経験の参照（use_experience=True の場合のみ）
+    system_prompt = SYSTEM_PROMPT
+    if use_experience:
+        experiences = load_experiences(max_count=3)
+        if experiences:
+            print(f"\n過去の成功経験 {len(experiences)}件 を参照します")
+            system_prompt += format_experiences_for_prompt(experiences)
+        else:
+            print("\n過去の経験はまだありません。初回実行として進めます。")
+
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_input},
     ]
 
+    tool_trace = []
     max_iterations = 30
     for i in range(max_iterations):
         print(f"\n--- ステップ {i+1} ---")
@@ -64,6 +84,8 @@ def run(user_input: str = None) -> str:
         # ツール呼び出しがなければ終了
         if not message.tool_calls:
             print(f"エージェント応答: {message.content}")
+            save_pending_experience(user_input, tool_trace, message.content or "", success=True)
+            print("  承認待ち: 実行結果を確認後に approve/reject を実行してください")
             return message.content or ""
 
         # ツール呼び出しを実行
@@ -77,10 +99,18 @@ def run(user_input: str = None) -> str:
             result = call_tool(func_name, func_args)
             print(f"  結果: {result[:200]}...")
 
+            tool_trace.append({
+                "tool": func_name,
+                "args": func_args,
+                "result_summary": result[:200],
+            })
+
             messages.append({
                 "role": "tool",
                 "tool_call_id": tool_call.id,
                 "content": result,
             })
 
+    save_pending_experience(user_input, tool_trace, "最大ステップ数到達", success=False)
+    print("  承認待ち: 失敗実行のため、通常は reject を推奨")
     return "最大ステップ数に達しました。処理を中断します。"

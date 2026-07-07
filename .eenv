@@ -1,3 +1,6 @@
 # モデル設定
 LLM_MODEL=gemini-3-flash-preview
-HOST_UID = 1002
+HOST_UID=1002
+
+# 経験参照 (0=対話確認, 1=常に参照)
+USE_EXPERIENCE=0

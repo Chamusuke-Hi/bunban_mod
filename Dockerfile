@@ -9,7 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM base AS dev
 
 ARG UID=1000
-RUN useradd -m -u ${UID} appuser && mkdir -p /app/data && chown appuser /app/data
+RUN useradd -m -u ${UID} appuser && mkdir -p /app/data && chown appuser /app/data \
+    && mkdir -p /tmp/experiences/pending && chown appuser /tmp/experiences/pending
 USER appuser
 
 COPY src/ ./src/

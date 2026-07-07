@@ -10,6 +10,8 @@ services:
         - https_proxy=http://umproxy.prx.intra.hitachi.co.jp:8080
         - UID=${HOST_UID:-1000}
     network_mode: host
+    stdin_open: true
+    tty: true
     env_file:
       - .eenv
       - .env
@@ -20,7 +22,7 @@ services:
       - NO_PROXY=.hitachi.co.jp,localhost,127.0.0.1
     volumes:
       - .:/app
-      - ../genka:/app/data:ro
+      - ../genka:/app/data:ro  ## Read-only mount for genka data
       - ./output:/app/output
     deploy:
       resources:
