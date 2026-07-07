@@ -1,6 +1,6 @@
 # Excel集計エージェント
 
-OpenAI互換APIの **Function Calling** を使い、Excelファイルを自律的に読み取り・分析・集計するAIエージェントです。
+`openai` SDK + **LangGraph** を使い、Excelファイルを自律的に読み取り・分析・集計するAIエージェントです。
 
 ---
 
@@ -107,11 +107,18 @@ HOST_UID=$(id -u) docker compose run --rm excel-agent python -m src.main "分番
 
 ## 仕組み（詳細）
 
+### 技術スタック
+
+| ライブラリ | 用途 |
+|-----------|------|
+| `openai` | OpenAI互換APIクライアント（LLM呼び出し・ツール実行判断） |
+| `langgraph` | ワークフロー制御（経験確認→実行→承認の状態遷移） |
+| `pandas` / `openpyxl` | Excel読み書き |
+| `fastapi` / `uvicorn` | Web UI |
+
 ### 1. エージェントループ (`agent.py`)
 
-OpenAI の **Function Calling** (tool use) の仕組みで動きます。
-LangChain の Agent/Chain は使わず、`openai` ライブラリを直接使用しています。
-ワークフロー制御（経験確認→実行→承認）には **LangGraph** の `StateGraph` を利用しています。
+`openai` ライブラリで OpenAI互換API にリクエストを送り、LLM がツール呼び出し（tool_calls）を返す仕組みでエージェントを実現しています。
 
 ```
 while ステップ < 30:
