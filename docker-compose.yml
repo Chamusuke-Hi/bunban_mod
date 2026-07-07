@@ -10,12 +10,11 @@ services:
         - https_proxy=http://umproxy.prx.intra.hitachi.co.jp:8080
         - UID=${HOST_UID:-1000}
     network_mode: host
-    stdin_open: true
-    tty: true
     env_file:
       - .eenv
       - .env
     environment:
+      - PYTHONUNBUFFERED=1
       - http_proxy=http://umproxy.prx.intra.hitachi.co.jp:8080
       - https_proxy=http://umproxy.prx.intra.hitachi.co.jp:8080
       - no_proxy=.hitachi.co.jp,localhost,127.0.0.1

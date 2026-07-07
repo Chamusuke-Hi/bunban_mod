@@ -38,7 +38,16 @@ def _check_experience_node(state: WorkflowState) -> WorkflowState:
                 inp = exp.get("user_input", "")[:60]
                 tools_used = len(exp.get("tool_trace", []))
                 print(f"  {i}. [{ts}] {inp}  (ツール{tools_used}回)")
-            choice = input("\n過去の経験を参照しますか? (y=参照 / n=使わない): ").strip().lower()
+            import sys
+            if sys.stdin.isatty():
+                try:
+                    choice = input("\n過去の経験を参照しますか? (y=参照 / n=使わない): ").strip().lower()
+                except (EOFError, OSError, KeyboardInterrupt):
+                    choice = "n"
+                    print("\n(入力取得失敗: 経験なしで続行します)")
+            else:
+                choice = "n"
+                print("\n(非対話モード: 経験なしで続行します)")
             if choice in {"y", "yes"}:
                 use_exp = True
                 print("✓ 経験参照を有効にします")
@@ -71,7 +80,16 @@ def _confirm_node(state: WorkflowState) -> WorkflowState:
     print(state.get("result", ""))
     print("=" * 60)
     
-    choice = input("\nこの結果を承認しますか? (y=承認 / n=却下): ").strip().lower()
+    import sys
+    if sys.stdin.isatty():
+        try:
+            choice = input("\nこの結果を承認しますか? (y=承認 / n=却下): ").strip().lower()
+        except (EOFError, OSError, KeyboardInterrupt):
+            choice = "y"
+            print("\n(入力取得失敗: 自動承認します)")
+    else:
+        choice = "y"
+        print("\n(非対話モード: 自動承認します)")
     approved = choice in {"y", "yes"}
     print(f"[LangGraph] ノード: confirm - 終了 ({'承認' if approved else '却下'})\n")
     return {"approved": approved}

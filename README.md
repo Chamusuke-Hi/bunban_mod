@@ -47,8 +47,22 @@ export $(grep HOST_UID .eenv) && docker compose up --build
 ---
 
 ## クイックスタート
+
+### 非対話モード（推奨）
+対話なしで最後まで自動実行されます。ログでエージェントステップを確認できます。
 ```bash
 HOST_UID=$(id -u) docker compose up --build
+```
+
+### 対話モード
+経験の参照確認・結果の承認/却下を対話的に行えます。
+```bash
+HOST_UID=$(id -u) docker compose run --rm excel-agent
+```
+
+### カスタム指示付き
+```bash
+HOST_UID=$(id -u) docker compose run --rm excel-agent python -m src.main "分番ごとの購入費用を集計してください"
 ```
 
 ## アーキテクチャ
